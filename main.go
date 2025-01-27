@@ -6,19 +6,36 @@ import (
 	"os"
 	"webview-automated-pishock/autoshock"
 
+	"github.com/spf13/viper"
+
 	webview "github.com/webview/webview_go"
 )
 
+type shockconfig struct {
+	APIKEY   string
+	CODES    []string
+	UNAME    string
+	NICKNAME string
+}
+
 func main() {
 
-	if len(os.Args) < 4 {
-		println("Not enough arguments")
-		return
-	}
-	var user = os.Args[1]
-	var code = os.Args[2]
-	var key = os.Args[3]
-	var name = "Autoshock-Default"
+	viper.SetConfigName("config")
+	viper.AddConfigPath(".")
+	viper.AutomaticEnv()
+
+	var cfg shockconfig
+	//var cfgbuf []byte
+	viper.SetConfigType("yaml")
+	viper.ReadInConfig()
+
+	//viper.ReadConfig(bytes.NewReader(cfgbuf))
+	viper.Unmarshal(&cfg)
+
+	user := cfg.UNAME
+	code := cfg.CODES
+	key := cfg.APIKEY
+	name := cfg.NICKNAME
 	if len(os.Args) > 4 {
 		name = os.Args[4]
 	}

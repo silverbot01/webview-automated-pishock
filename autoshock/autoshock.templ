@@ -1,6 +1,8 @@
 package autoshock
 
-templ Index(apikey string, code string,  user string, name string) {
+import "strconv"
+
+templ Index(apikey string, code []string,  user string, name string) {
     <!doctype html>
 <html class="no-js" lang="">
 
@@ -29,9 +31,11 @@ templ Index(apikey string, code string,  user string, name string) {
   <h1>AutoShock</h1>
   <label for="shockerSelect">Choose shockers:</label>
   <select id="shockerSelect" multiple required>
-    <option value={code}>Shocker 1</option>
-    <option value="YOURSHARECODE">Empty</option>
-    <option value="YOURSHARECODE">Empty 2</option>
+    if len(code) > 0 {
+      for i,k := range code {
+        <option value={k}>Shocker {strconv.Itoa(i+1)}</option>
+      }
+    }
   </select>
 
   <label for="modeSelect">Choose mode:</label>

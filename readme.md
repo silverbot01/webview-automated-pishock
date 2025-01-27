@@ -1,11 +1,7 @@
-Go/templ/webview desktop app transformation for Lisa's automated shocking app.
+Go/templ/webview/viper desktop app transformation for Lisa's automated shocking app.
 
-Please run in command line with the following arguments in order: "username" "shareCode" "api-key".
-
-Example starting command: ./autoshock.exe "cutepuppy" "345ADAD" "d9DADDYa9da8-wda0dwa8da0d08-wdada80da8d0-wada"
-
-Can add a fourth optional argument to change your nickname sent with API calls from the default of "Autoshock-Default"
+Viper is utilized for reading the .yaml config file. Multiple sharecodes can be entered as shown in the sample config.yaml. Ensure its in the same directory as autoshock.exe
 
 Dev notes:
 
-Utilize "go build -ldflags "-linkmode 'external' -extldflags '-static'" -o bin_deploy_static/autoshock.exe" to deploy a statically-linked executable for portability
+Utilize "go build -ldflags "-linkmode 'external' -extldflags '-static'" -o bin_deploy_static/autoshock.exe" to deploy a statically-linked executable for portability. Deploy with this readme and the sample config file

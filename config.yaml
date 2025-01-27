@@ -1,0 +1,8 @@
+APIKEY: "asdadasdadada"
+# can have many codes or 1, 3 lines put here for example
+CODES:
+- "aaaaa"
+- "bbbbbbb"
+- "ccccccc"
+UNAME: "sdawsdwasdawd"
+NICKNAME: "Autoshock-Default"
