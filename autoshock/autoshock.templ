@@ -1,0 +1,580 @@
+package autoshock
+
+templ Index(apikey string, code string,  user string, name string) {
+    <!doctype html>
+<html class="no-js" lang="">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title></title>
+  @autoshock_css()
+  <meta name="description" content="">
+
+  <meta property="og:title" content="">
+  <meta property="og:type" content="">
+  <meta property="og:url" content="">
+  <meta property="og:image" content="">
+
+  /*<link rel="icon" href="./favicon.ico" sizes="any">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">*/
+  <link rel="apple-touch-icon" href="icon.png">
+
+  <link rel="manifest" href="site.webmanifest">
+  <meta name="theme-color" content="#fafafa">
+</head>
+
+<body>
+<form id="shockerForm">
+  <h1>AutoShock</h1>
+  <label for="shockerSelect">Choose shockers:</label>
+  <select id="shockerSelect" multiple required>
+    <option value={code}>Shocker 1</option>
+    <option value="YOURSHARECODE">Empty</option>
+    <option value="YOURSHARECODE">Empty 2</option>
+  </select>
+
+  <label for="modeSelect">Choose mode:</label>
+  <select id="modeSelect" required>
+    <option value="0">Shock</option>
+    <option value="1">Vibrate</option>
+    <option value="2" selected="selected">Beep</option>
+  </select>
+
+  <label>Duration:</label>
+  <div class="range-input-container">
+    <label for="minDurationInput"></label>
+    <input type="number" id="minDurationInput" step="1" min="1" max="15" placeholder="min" required>
+    <span class="range-dash">-</span>
+    <label for="maxDurationInput"></label>
+    <input type="number" id="maxDurationInput" step="1" min="1" max="15" placeholder="max" required>
+  </div>
+
+  <label>Intensity:</label>
+  <div class="range-input-container">
+    <label for="minIntensityInput"></label>
+    <input type="number" id="minIntensityInput" step="1" min="1" max="100" placeholder="min" required>
+    <span class="range-dash">-</span>
+    <label for="maxIntensityInput"></label>
+    <input type="number" id="maxIntensityInput" step="1" min="1" max="100" placeholder="max" required>
+  </div>
+
+  <label>Delay:</label>
+  <div class="range-input-container">
+    <label for="minDelayInput"></label>
+    <input type="number" id="minDelayInput" step="1" min="1" placeholder="min" required>
+    <span class="range-dash">-</span>
+    <label for="maxDelayInput"></label>
+    <input type="number" id="maxDelayInput" step="1" min="1" placeholder="max" required>
+  </div>
+
+  <button id="startButton" type="button">Start</button>
+</form>
+
+<div id="runningLoopsContainer"></div>
+
+@templ.JSONScript("key", apikey)
+@templ.JSONScript("user", user)
+@templ.JSONScript("name", name)
+
+@autoshock_JS()
+</body>
+</html>
+
+}
+
+templ autoshock_JS() {
+
+<script type="text/javascript">
+const ENDPOINT = "https://do.pishock.com/api/apioperate/";
+const APIKEY = JSON.parse(document.getElementById("key").textContent);
+const USER = JSON.parse(document.getElementById("user").textContent);
+const NAME = JSON.parse(document.getElementById("name").textContent);
+
+let runningLoops = [];
+
+function startLoop() {
+  // Get the codes to run it on
+  let selectBox = document.getElementById('shockerSelect');
+  let codes = [];
+  for (let i = 0; i < selectBox.options.length; i++) {
+    if (selectBox.options[i].selected) {
+      codes.push(selectBox.options[i])
+    }
+  }
+
+  // Form options into object
+  const options = {
+    running: true,
+    currentTimeout: null,
+    codes: codes,
+    operation: parseInt(document.getElementById("modeSelect").value),
+    minIntensity: parseInt(document.getElementById("minIntensityInput").value),
+    maxIntensity: parseInt(document.getElementById("maxIntensityInput").value),
+    minDuration: parseInt(document.getElementById("minDurationInput").value),
+    maxDuration: parseInt(document.getElementById("maxDurationInput").value),
+    minDelay: parseInt(document.getElementById("minDelayInput").value),
+    maxDelay: parseInt(document.getElementById("maxDelayInput").value)
+  }
+
+  // Check ranges are valid
+  if (options.minIntensity > options.maxIntensity || options.minDuration > options.maxDuration || options.minDelay > options.maxDelay) {
+    alert("Minimum can't be higher than maximum");
+    return;
+  }
+
+  runningLoops.push(options)
+  updateRunningLoopsList()
+  loop(options)
+}
+
+function updateRunningLoopsList() {
+  const loopsContainer = document.getElementById("runningLoopsContainer");
+  loopsContainer.innerHTML = ""; // Clear the previous list
+
+  runningLoops.forEach((loopData, index) => {
+    if (!loopData.running) return;
+    const loopItem = document.createElement("div");
+    loopItem.classList.add("loop-item");
+    loopItem.innerHTML = `
+      <strong>${loopData.codes.map(function (code) { return code.text }).join(", ")}</strong><br>
+      <span>${optionsToString(loopData)}</span><br>
+      <button type="button" class="stopButton">Stop</button>
+    `;
+
+    const button = loopItem.querySelector(".stopButton");
+    button.addEventListener("click", () => stopLoopByIndex(index))
+
+    loopsContainer.appendChild(loopItem);
+  });
+}
+
+function optionsToString(opt) {
+  if (opt.operation === 2) {
+    return `Beeping every ${opt.minDelay}-${opt.maxDelay}s`
+  }
+
+  return `${operationToString(opt.operation)} every ${opt.minDelay}-${opt.maxDelay}s for ${opt.minDuration}-${opt.maxDuration}s at ${opt.minIntensity}-${opt.maxIntensity}`
+}
+
+function operationToString(opcode) {
+  if (opcode === 0) return "Shocking";
+  if (opcode === 1) return "Vibrating";
+  return "Beeping";
+}
+
+function stopLoopByIndex(index) {
+  const loopData = runningLoops[index];
+  if (loopData) {
+    loopData.running = false;
+    clearTimeout(loopData.currentTimeout)
+    updateRunningLoopsList();
+  }
+}
+
+
+function loop(options) {
+  if (!options.running) return;
+  doOperation(options);
+
+  let rand = Math.random() * (options.maxDelay - options.minDelay) + options.minDelay;
+  options.currentTimeout = setTimeout(function () {
+    loop(options);
+  }, rand * 1000)
+}
+
+function doOperation(options) {
+  for (let i = 0; i < options.codes.length; i++) {
+    let payload = {
+      Username: USER,
+      Code: options.codes[i].value,
+      Apikey: APIKEY,
+      Name: NAME,
+      Op: options.operation,
+      Duration: Math.floor(Math.random() * (options.maxDuration - options.minDuration + 1) + options.minDuration),
+      Intensity: Math.floor(Math.random() * (options.maxIntensity - options.minIntensity + 1) + options.minIntensity)
+    }
+
+    fetch(ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    })
+      .catch(error => console.error('Exception: ', error));
+  }
+}
+
+document.getElementById('startButton').addEventListener('click', function (e) {
+  let form = document.getElementById("shockerForm");
+  if (!form.checkValidity()) {
+    form.reportValidity();
+  }
+  else {
+    e.preventDefault();
+    startLoop();
+  }
+})
+
+</script>
+
+}
+
+templ autoshock_css() {
+    <style type="text/css">
+
+    /*! HTML5 Boilerplate v9.0.0-RC1 | MIT License | https://html5boilerplate.com/ */
+
+/* main.css 3.0.0 | MIT License | https://github.com/h5bp/main.css#readme */
+/*
+ * What follows is the result of much research on cross-browser styling.
+ * Credit left inline and big thanks to Nicolas Gallagher, Jonathan Neal,
+ * Kroc Camen, and the H5BP dev community and team.
+ */
+
+/* ==========================================================================
+   Base styles: opinionated defaults
+   ========================================================================== */
+
+html {
+  color: #222;
+  font-size: 1em;
+  line-height: 1.4;
+}
+
+/*
+ * Remove text-shadow in selection highlight:
+ * https://twitter.com/miketaylr/status/12228805301
+ *
+ * Customize the background color to match your design.
+ */
+
+::-moz-selection {
+  background: #b3d4fc;
+  text-shadow: none;
+}
+
+::selection {
+  background: #b3d4fc;
+  text-shadow: none;
+}
+
+/*
+ * A better looking default horizontal rule
+ */
+
+hr {
+  display: block;
+  height: 1px;
+  border: 0;
+  border-top: 1px solid #ccc;
+  margin: 1em 0;
+  padding: 0;
+}
+
+/*
+ * Remove the gap between audio, canvas, iframes,
+ * images, videos and the bottom of their containers:
+ * https://github.com/h5bp/html5-boilerplate/issues/440
+ */
+
+audio,
+canvas,
+iframe,
+img,
+svg,
+video {
+  vertical-align: middle;
+}
+
+/*
+ * Remove default fieldset styles.
+ */
+
+fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+/*
+ * Allow only vertical resizing of textareas.
+ */
+
+textarea {
+  resize: vertical;
+}
+
+/* ==========================================================================
+   Author's custom styles
+   ========================================================================== */
+
+/* ==========================================================================
+   Helper classes
+   ========================================================================== */
+
+/*
+ * Hide visually and from screen readers
+ */
+
+.hidden,
+[hidden] {
+  display: none !important;
+}
+
+/*
+ * Hide only visually, but have it available for screen readers:
+ * https://snook.ca/archives/html_and_css/hiding-content-for-accessibility
+ *
+ * 1. For long content, line feeds are not interpreted as spaces and small width
+ *    causes content to wrap 1 word per line:
+ *    https://medium.com/@jessebeach/beware-smushed-off-screen-accessible-text-5952a4c2cbfe
+ */
+
+.visually-hidden {
+  border: 0;
+  clip: rect(0, 0, 0, 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+  /* 1 */
+}
+
+/*
+ * Extends the .visually-hidden class to allow the element
+ * to be focusable when navigated to via the keyboard:
+ * https://www.drupal.org/node/897638
+ */
+
+.visually-hidden.focusable:active,
+.visually-hidden.focusable:focus {
+  clip: auto;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  position: static;
+  white-space: inherit;
+  width: auto;
+}
+
+/*
+ * Hide visually and from screen readers, but maintain layout
+ */
+
+.invisible {
+  visibility: hidden;
+}
+
+/*
+ * Clearfix: contain floats
+ *
+ * The use of `table` rather than `block` is only necessary if using
+ * `::before` to contain the top-margins of child elements.
+ */
+
+.clearfix::before,
+.clearfix::after {
+  content: "";
+  display: table;
+}
+
+.clearfix::after {
+  clear: both;
+}
+
+/* ==========================================================================
+   EXAMPLE Media Queries for Responsive Design.
+   These examples override the primary ('mobile first') styles.
+   Modify as content requires.
+   ========================================================================== */
+
+@media only screen and (min-width: 35em) {
+  /* Style adjustments for viewports that meet the condition */
+}
+
+@media print,
+  (-webkit-min-device-pixel-ratio: 1.25),
+  (min-resolution: 1.25dppx),
+  (min-resolution: 120dpi) {
+  /* Style adjustments for high resolution devices */
+}
+
+/* ==========================================================================
+   Print styles.
+   Inlined to avoid the additional HTTP request:
+   https://www.phpied.com/delay-loading-your-print-css/
+   ========================================================================== */
+
+@media print {
+  *,
+  *::before,
+  *::after {
+    background: #fff !important;
+    color: #000 !important;
+    /* Black prints faster */
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  a,
+  a:visited {
+    text-decoration: underline;
+  }
+
+  a[href]::after {
+    content: " (" attr(href) ")";
+  }
+
+  abbr[title]::after {
+    content: " (" attr(title) ")";
+  }
+
+  /*
+   * Don't show links that are fragment identifiers,
+   * or use the `javascript:` pseudo protocol
+   */
+  a[href^="#"]::after,
+  a[href^="javascript:"]::after {
+    content: "";
+  }
+
+  pre {
+    white-space: pre-wrap !important;
+  }
+
+  pre,
+  blockquote {
+    border: 1px solid #999;
+    page-break-inside: avoid;
+  }
+
+  tr,
+  img {
+    page-break-inside: avoid;
+  }
+
+  p,
+  h2,
+  h3 {
+    orphans: 3;
+    widows: 3;
+  }
+
+  h2,
+  h3 {
+    page-break-after: avoid;
+  }
+}
+
+
+/* Custom */
+
+form {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+form div {
+  margin-bottom: 15px;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+}
+
+input,
+select {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 15px;
+  box-sizing: border-box;
+}
+
+select[multiple] {
+  overflow: hidden;
+  height: auto;
+}
+
+body {
+  background-color: #000;
+  color: #fff;
+  font-family: Consolas, serif;
+}
+
+body input,
+body select,
+body textarea {
+  background-color: #18191c;
+  color: #dcddde;
+  border: 1px solid #000;
+  border-radius: 5px;
+  text-align: center;
+}
+
+button {
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  padding: 10px 15px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+#startButton {
+  background-color: #3ba55c;
+  margin-right: 20px;
+}
+
+#startButton:hover {
+  background-color: #2f844a;
+}
+
+.stopButton {
+  background-color: #ed4245;
+}
+
+.stopButton:hover {
+  background-color: #dd1519;
+}
+
+.range-input-container {
+  display: flex;
+  justify-content: center;
+}
+
+.range-input-container input {
+  flex: 1;
+}
+
+.range-dash {
+  margin: 0 20px;
+  line-height: 1.6;
+}
+
+h1 {
+  text-align: center;
+}
+
+#runningLoopsContainer {
+  max-width: 400px;
+  margin: 30px auto 0;
+}
+
+.loop-item {
+  background-color: #18191c;
+  color: #dcddde;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+</style>
+
+}
