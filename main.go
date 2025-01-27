@@ -7,13 +7,12 @@ import (
 	"webview-automated-pishock/autoshock"
 
 	"github.com/spf13/viper"
-
 	webview "github.com/webview/webview_go"
 )
 
 type shockconfig struct {
 	APIKEY   string
-	CODES    []string
+	CODES    [][2]string
 	UNAME    string
 	NICKNAME string
 }
@@ -27,10 +26,15 @@ func main() {
 	var cfg shockconfig
 	//var cfgbuf []byte
 	viper.SetConfigType("yaml")
+
 	viper.ReadInConfig()
 
 	//viper.ReadConfig(bytes.NewReader(cfgbuf))
 	viper.Unmarshal(&cfg)
+
+	for _, k := range cfg.CODES {
+		println(k[0], k[1])
+	}
 
 	user := cfg.UNAME
 	code := cfg.CODES
